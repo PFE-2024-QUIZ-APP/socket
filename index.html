@@ -1,0 +1,24 @@
+<html>
+<head>
+    <title>Socket.io</title>
+</head>
+<body>
+<input>
+<button onclick="joinRoom()">Join Room</button>
+<script src="/socket.io/socket.io.js"></script>
+<p id="roomNumber"></p>
+<script>
+    const socket = io();
+    function joinRoom(){
+        var room = document.querySelector('input').value;
+        socket.emit('join', room);
+    }
+    socket.on('roomData', function(data) {
+        console.log(data);
+        // document.getElementById('roomData').innerText = JSON.stringify(data, null, 2);
+        //
+        // document.getElementById('roomNumber').innerText = `Room ID: ${data.id}`;
+    });
+</script>
+</body>
+</html>

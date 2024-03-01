@@ -14,6 +14,8 @@ app.get('/', (req, res) => {
     res.sendFile(join(__dirname, 'index.html'));
 });
 
+const roomData = {};
+
 io.on('connection', (socket) => {
     console.log('a user connected');
     socket.on('disconnect', () => {
@@ -25,6 +27,7 @@ io.on('connection', (socket) => {
         console.log(`user joined room ${room}`);
         if (!roomData[room]) {
             roomData[room] = {
+                id: room,
                 players: [],
                 messages: [],
                 questions: [],
@@ -32,12 +35,8 @@ io.on('connection', (socket) => {
                 scorePlayers:[],
             };
         }
-        roomData[room].users.push(socket.id); // Utiliser l'ID du socket comme identifiant de l'utilisateur
-        callback({
-            status: "success",
-            message: `Joined room ${room} successfully.`,
-            code: 200
-        });
+        roomData[room].players.push(socket.id); // Utiliser l'ID du socket comme identifiant de  l'utilisateur
+        io.to(room).emit('roomData', roomData[room]);
 
     });
 });
