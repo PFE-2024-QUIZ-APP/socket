@@ -15,6 +15,32 @@ app.get('/', (req, res) => {
 });
 
 const roomData = {};
+const exampleQuizz = [
+    {
+        questionText: "What is the capital of France?",
+        responses: ["Paris", "London", "Madrid", "Rome"],
+        rightAnswer: ["Paris"],
+        types: "multichoise",
+    },
+    {
+        questionText: "What is the capital of Spain?",
+        responses: ["Paris", "London", "Madrid", "Rome"],
+        rightAnswer: ["Madrid"],
+        types: "multichoise",
+    },
+    {
+        questionText: "What is the capital of Italy?",
+        responses: ["Paris", "London", "Madrid", "Rome"],
+        rightAnswer: ["Rome"],
+        types: "multichoise",
+    },
+    {
+        questionText: "What is the capital of England?",
+        responses: ["Paris", "London", "Madrid", "Rome"],
+        rightAnswer: ["London"],
+        types: "multichoise",
+    }
+]
 
 io.on('connection', (socket) => {
     console.log('a user connected');
@@ -24,20 +50,46 @@ io.on('connection', (socket) => {
 
     socket.on("join", (room, callback) => {
         socket.join(room);
-        console.log(`user joined room ${room}`);
         if (!roomData[room]) {
             roomData[room] = {
                 id: room,
-                players: [],
-                messages: [],
                 questions: [],
+                players: [],
                 responsesPlayers:[],
                 scorePlayers:[],
+                // Need to add also the theme of the room ?
             };
         }
-        roomData[room].players.push(socket.id); // Utiliser l'ID du socket comme identifiant de  l'utilisateur
-        io.to(room).emit('roomData', roomData[room]);
+        roomData[room].players.push(socket.id); // Use socket.id to identify the player
+        io.to(room).emit('roomData', roomData[room].players, roomData[room].id); // Return players in the room and ID
+    });
 
+    socket.on("startGame", (room) => {
+        // Start the game
+        io.to(room).emit('startGame', roomData[room].questions[0].questionText, roomData[room].questions[0].responses, 0, roomData[room].questions.length); // Return the first question, the possible responses and the number of questions
+    });
+
+    socket.on("responsePlayer", (room, response, indexOfQuestion) => {
+        // Receive a response from a player
+        roomData[room].responsesPlayers[indexOfQuestion] = response;
+        if(indexOfQuestion === roomData[room].questions.length - 1){
+            // If it's the last question
+            io.to(room).emit('endGame', roomData[room].responsesPlayers, roomData[room].scorePlayers);
+            return;
+        }
+        if(roomData[room].responsesPlayers.length === roomData[room].players.length){
+            // If everyPlayer have answered
+            io.to(room).emit('endQuestions', roomData[room].responsesPlayers, roomData[room].questions[indexOfQuestion] );
+            return;
+        }
+        io.to(room).emit('responsePlayer', roomData[room].responsesPlayers[indexOfQuestion]);
+        // Return the responses of the players to all users in the room
+    });
+
+    socket.on("nextQuestions", (room, indexOfQuestion) => {
+        // Go to the next question
+        io.to(room).emit('nextQuestions', roomData[room].questions[indexOfQuestion + 1].questionText, roomData[room].questions[indexOfQuestion + 1].responses, indexOfQuestion + 1);
+        // Return the next question, the possible responses and the index of the question
     });
 });
 
