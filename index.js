@@ -48,19 +48,19 @@ io.on('connection', (socket) => {
         console.log('user disconnected');
     });
 
-    socket.on("join", (room, callback) => {
+    socket.on("join", (room, userName, avatar,  callback) => {
         socket.join(room);
         if (!roomData[room]) {
             roomData[room] = {
                 id: room,
-                questions: [],
+                questions: exampleQuizz, // Example data to test the game
                 players: [],
                 responsesPlayers:[],
                 scorePlayers:[],
                 // Need to add also the theme of the room ?
             };
         }
-        roomData[room].players.push(socket.id); // Use socket.id to identify the player
+        roomData[room].players.push({id : socket.id, name: userName, avatar:avatar }); // Use socket.id to identify the player
         io.to(room).emit('roomData', roomData[room].players, roomData[room].id); // Return players in the room and ID
     });
 
