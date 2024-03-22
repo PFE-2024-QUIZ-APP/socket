@@ -14,31 +14,31 @@ app.get('/', (req, res) => {
     res.sendFile(join(__dirname, 'index.html'));
 });
 
-const roomData = {};
-const exampleQuizz = [
+
+const roomData = [
     {
         questionText: "What is the capital of France?",
         responses: ["Paris", "London", "Madrid", "Rome"],
         rightAnswer: ["Paris"],
-        types: "multichoise",
+        types: "singleResponse",
     },
     {
         questionText: "What is the capital of Spain?",
         responses: ["Paris", "London", "Madrid", "Rome"],
         rightAnswer: ["Madrid"],
-        types: "multichoise",
+        types: "singleResponse",
     },
     {
         questionText: "What is the capital of Italy?",
         responses: ["Paris", "London", "Madrid", "Rome"],
         rightAnswer: ["Rome"],
-        types: "multichoise",
+        types: "singleResponse",
     },
     {
         questionText: "What is the capital of England?",
         responses: ["Paris", "London", "Madrid", "Rome"],
         rightAnswer: ["London"],
-        types: "multichoise",
+        types: "singleResponse",
     }
 ]
 
