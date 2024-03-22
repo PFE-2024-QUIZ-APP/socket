@@ -61,7 +61,7 @@ io.on('connection', (socket) => {
         if (!roomData[room]) {
             roomData[room] = {
                 id: room,
-                questions: exampleQuizz, // Example data to test the game
+                questions: roomData, // Example data to test the game
                 players: [],
                 responsesPlayers:[],
                 scorePlayers:[],
