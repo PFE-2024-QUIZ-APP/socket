@@ -46,10 +46,18 @@ io.on('connection', (socket) => {
     console.log('a user connected');
     socket.on('disconnect', () => {
         console.log('user disconnected');
-    });
+        let roomId = socket.data.roomId || null;
+        if (roomId) {
+            roomData[roomId].players = roomData[roomId].players.filter(player => player.id!==socket.id);
+            io.to(roomId).emit('roomData', {players:roomData[roomId].players, roomId:roomData[roomId].id}); // Return players in the room and ID
+
+        }
+   });
 
     socket.on("join", (room, userName, avatar,  callback) => {
         socket.join(room);
+        socket.data.roomId = room;
+        console.log(room,userName, avatar)
         if (!roomData[room]) {
             roomData[room] = {
                 id: room,
@@ -60,13 +68,14 @@ io.on('connection', (socket) => {
                 // Need to add also the theme of the room ?
             };
         }
+        console.log(roomData[room].players);
         roomData[room].players.push({id : socket.id, name: userName, avatar:avatar }); // Use socket.id to identify the player
-        io.to(room).emit('roomData', roomData[room].players, roomData[room].id); // Return players in the room and ID
+        io.to(room).emit('roomData', {players:roomData[room].players, roomId:roomData[room].id}); // Return players in the room and ID
     });
 
     socket.on("startGame", (room) => {
         // Start the game
-        io.to(room).emit('startGame', roomData[room].questions[0].questionText, roomData[room].questions[0].responses, 0, roomData[room].questions.length); // Return the first question, the possible responses and the number of questions
+        io.to(room).emit('startGame', {fisrtQuestion :roomData[room].questions[0], questionLength:roomData[room].questions/length}, roomData[room].questions.length); // Return the first question, the possible responses and the number of questions
     });
 
     socket.on("responsePlayer", (room, response, indexOfQuestion) => {
