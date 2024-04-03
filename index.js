@@ -15,32 +15,17 @@ app.get('/', (req, res) => {
 });
 
 
-const roomData = [
-    {
-        questionText: "What is the capital of France?",
-        responses: ["Paris", "London", "Madrid", "Rome"],
-        rightAnswer: ["Paris"],
-        types: "singleResponse",
-    },
-    {
-        questionText: "What is the capital of Spain?",
-        responses: ["Paris", "London", "Madrid", "Rome"],
-        rightAnswer: ["Madrid"],
-        types: "singleResponse",
-    },
-    {
-        questionText: "What is the capital of Italy?",
-        responses: ["Paris", "London", "Madrid", "Rome"],
-        rightAnswer: ["Rome"],
-        types: "singleResponse",
-    },
-    {
-        questionText: "What is the capital of England?",
-        responses: ["Paris", "London", "Madrid", "Rome"],
-        rightAnswer: ["London"],
-        types: "singleResponse",
+const roomData = [];
+
+function generateCode(length = 5) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
-]
+    return result;
+}
 
 io.on('connection', (socket) => {
     console.log('a user connected');
@@ -54,20 +39,24 @@ io.on('connection', (socket) => {
         }
    });
 
+    socket.on('createRoom', (uidQuizz, userName, avatar) => {
+        console.log(uidQuizz, userName, avatar)
+        let code = generateCode();
+        if(!roomData[code]){
+            roomData[code] = {
+                id: code,
+                players: [],
+            };
+        }
+        socket.join(code);
+        roomData[code].players.push({id : socket.id, name: userName, avatar:avatar }); // Use socket.id to identify the player
+        io.to(code).emit('roomData', {players:roomData[code].players, roomId:roomData[code].id}); // Return players in the room and ID
+    })
+
     socket.on("join", (room, userName, avatar,  callback) => {
         socket.join(room);
         socket.data.roomId = room;
         console.log(room,userName, avatar)
-        if (!roomData[room]) {
-            roomData[room] = {
-                id: room,
-                questions: roomData, // Example data to test the game
-                players: [],
-                responsesPlayers:[],
-                scorePlayers:[],
-                // Need to add also the theme of the room ?
-            };
-        }
         console.log(roomData[room].players);
         roomData[room].players.push({id : socket.id, name: userName, avatar:avatar }); // Use socket.id to identify the player
         io.to(room).emit('roomData', {players:roomData[room].players, roomId:roomData[room].id}); // Return players in the room and ID
