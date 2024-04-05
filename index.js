@@ -1,16 +1,33 @@
 import express from 'express';
+import 'dotenv/config'
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Server } from 'socket.io';
+import { getFirestore, collection, doc, getDoc } from 'firebase/firestore/lite';
+import { initializeApp } from "firebase/app";
 
-const app = express();
-const server = createServer(app);
+const firebaseConfig = {
+    apiKey: process.env.API_KEY,
+    authDomain: "quizz-app-79583.firebaseapp.com",
+    projectId: "quizz-app-79583",
+    storageBucket: "quizz-app-79583.appspot.com",
+    messagingSenderId: "682570150281",
+    appId: "1:682570150281:web:bd4ab96129bfad96ec3158"
+};
+
+const app = initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+
+
+const appServer = express();
+const server = createServer(appServer);
 const io = new Server(server);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-app.get('/', (req, res) => {
+appServer.get('/', (req, res) => {
     res.sendFile(join(__dirname, 'index.html'));
 });
 
@@ -27,6 +44,17 @@ function generateCode(length = 5) {
     return result;
 }
 
+const getQuizz = async (uidQuizz) => {
+    try{
+        const quizz = doc(db, "Theme", uidQuizz);
+        const quizzDoc = await getDoc(quizz);
+        return quizzDoc.data();
+    }catch (e){
+        console.log(e);
+        return null;
+    }
+}
+
 io.on('connection', (socket) => {
     console.log('a user connected');
     socket.on('disconnect', () => {
@@ -35,22 +63,22 @@ io.on('connection', (socket) => {
         if (roomId) {
             roomData[roomId].players = roomData[roomId].players.filter(player => player.id!==socket.id);
             io.to(roomId).emit('roomData', {players:roomData[roomId].players, roomId:roomData[roomId].id}); // Return players in the room and ID
-
         }
-   });
+    });
 
-    socket.on('createRoom', (uidQuizz, userName, avatar) => {
-        console.log(uidQuizz, userName, avatar)
+    socket.on('createRoom', async (uidQuizz, userName, avatar) => {
         let code = generateCode();
-        if(!roomData[code]){
+        if (!roomData[code]) {
             roomData[code] = {
                 id: code,
                 players: [],
             };
         }
+        let quizz = await getQuizz(uidQuizz)
         socket.join(code);
-        roomData[code].players.push({id : socket.id, name: userName, avatar:avatar }); // Use socket.id to identify the player
-        io.to(code).emit('roomData', {players:roomData[code].players, roomId:roomData[code].id}); // Return players in the room and ID
+        roomData[code].questions = quizz.questions;
+        roomData[code].players.push({id: socket.id, name: userName, avatar: avatar}); // Use socket.id to identify the player
+        io.to(code).emit('roomData', {players: roomData[code].players, roomId: roomData[code].id, questions:roomData[code].questions}); // Return players in the room and ID
     })
 
     socket.on("join", (room, userName, avatar,  callback) => {
