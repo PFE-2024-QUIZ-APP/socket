@@ -23,7 +23,12 @@ const db = getFirestore(app);
 
 const appServer = express();
 const server = createServer(appServer);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+    },
+});
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
