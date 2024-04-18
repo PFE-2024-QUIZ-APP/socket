@@ -1,46 +1,59 @@
 import express from 'express';
+import 'dotenv/config'
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { Server } from 'socket.io';
+import { getFirestore, collection, doc, getDoc } from 'firebase/firestore/lite';
+import { initializeApp } from "firebase/app";
 
-const app = express();
-const server = createServer(app);
+const firebaseConfig = {
+    apiKey: process.env.API_KEY,
+    authDomain: "quizz-app-79583.firebaseapp.com",
+    projectId: "quizz-app-79583",
+    storageBucket: "quizz-app-79583.appspot.com",
+    messagingSenderId: "682570150281",
+    appId: "1:682570150281:web:bd4ab96129bfad96ec3158"
+};
+
+const app = initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+
+
+const appServer = express();
+const server = createServer(appServer);
 const io = new Server(server);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-app.get('/', (req, res) => {
+appServer.get('/', (req, res) => {
     res.sendFile(join(__dirname, 'index.html'));
 });
 
 
-const roomData = [
-    {
-        questionText: "What is the capital of France?",
-        responses: ["Paris", "London", "Madrid", "Rome"],
-        rightAnswer: ["Paris"],
-        types: "singleResponse",
-    },
-    {
-        questionText: "What is the capital of Spain?",
-        responses: ["Paris", "London", "Madrid", "Rome"],
-        rightAnswer: ["Madrid"],
-        types: "singleResponse",
-    },
-    {
-        questionText: "What is the capital of Italy?",
-        responses: ["Paris", "London", "Madrid", "Rome"],
-        rightAnswer: ["Rome"],
-        types: "singleResponse",
-    },
-    {
-        questionText: "What is the capital of England?",
-        responses: ["Paris", "London", "Madrid", "Rome"],
-        rightAnswer: ["London"],
-        types: "singleResponse",
+const roomData = [];
+
+function generateCode(length = 5) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
-]
+    return result;
+}
+
+const getQuizz = async (uidQuizz) => {
+    try{
+        const quizz = doc(db, "Theme", uidQuizz);
+        const quizzDoc = await getDoc(quizz);
+        return quizzDoc.data();
+    }catch (e){
+        console.log(e);
+        return null;
+    }
+}
 
 io.on('connection', (socket) => {
     console.log('a user connected');
@@ -48,34 +61,40 @@ io.on('connection', (socket) => {
         console.log('user disconnected');
         let roomId = socket.data.roomId || null;
         if (roomId) {
-            roomData[roomId].players = roomData[roomId].players.filter(player => player.id!==socket.id);
-            io.to(roomId).emit('roomData', {players:roomData[roomId].players, roomId:roomData[roomId].id}); // Return players in the room and ID
-
+            roomData[roomId]["players"] = roomData[roomId]["players"].filter(player => player.id!==socket.id);
+            io.to(roomId).emit('roomData', {players:roomData[roomId]["players"], roomId:roomData[roomId]["id"]}); // Return players in the room and ID
         }
-   });
+    });
+
+    socket.on('createRoom', async (uidQuizz, userName, avatar) => {
+        let code = generateCode();
+        if (!roomData[code]) {
+            roomData[code] = {
+                id: code,
+                players: [],
+            };
+        }
+        let quizz = await getQuizz(uidQuizz)
+        socket.join(code);
+        roomData[code].questions = quizz.questions;
+        roomData[code].players.push({id: socket.id, name: userName, avatar: avatar}); // Use socket.id to identify the player
+        io.to(code).emit('roomData', {players: roomData[code]["players"], roomId: roomData[code]["id"], questions:roomData[code]["questions"]}); // Return players in the room and ID
+    })
 
     socket.on("join", (room, userName, avatar,  callback) => {
         socket.join(room);
+        console.log(roomData);
         socket.data.roomId = room;
-        console.log(room,userName, avatar)
-        if (!roomData[room]) {
-            roomData[room] = {
-                id: room,
-                questions: exampleQuizz, // Example data to test the game
-                players: [],
-                responsesPlayers:[],
-                scorePlayers:[],
-                // Need to add also the theme of the room ?
-            };
-        }
-        console.log(roomData[room].players);
-        roomData[room].players.push({id : socket.id, name: userName, avatar:avatar }); // Use socket.id to identify the player
-        io.to(room).emit('roomData', {players:roomData[room].players, roomId:roomData[room].id}); // Return players in the room and ID
+        roomData[room]["players"].push({id : socket.id, name: userName, avatar:avatar }); // Use socket.id to identify the player
+        io.to(room).emit('roomData', {players:roomData[room]["players"], roomId:roomData[room]["id"]}); // Return players in the room and ID
     });
 
+
     socket.on("startGame", (room) => {
+        console.log("startGame")
+        console.log(room)
         // Start the game
-        io.to(room).emit('startGame', {fisrtQuestion :roomData[room].questions[0], questionLength:roomData[room].questions/length}, roomData[room].questions.length); // Return the first question, the possible responses and the number of questions
+        io.to(room).emit('startGame', { question :roomData[room]["questions"][0]} );
     });
 
     socket.on("responsePlayer", (room, response, indexOfQuestion) => {
