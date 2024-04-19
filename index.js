@@ -40,7 +40,7 @@ appServer.get('/', (req, res) => {
 const roomData = [];
 
 function generateCode(length = 5) {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';
     const charactersLength = characters.length;
     for (let i = 0; i < length; i++) {
@@ -118,8 +118,7 @@ io.on('connection', (socket) => {
             return;
         }
         let quizz = await getQuizz(roomData[roomId]["uidQuizz"]);
-        roomData[roomId]["questions"] = getQuizz.questions;
-        // Start the game
+        roomData[roomId]["questions"] = quizz.questions;
         io.to(roomId).emit('startGame', { question :roomData[roomId]["questions"][0] , creator: roomData[roomId]["players"][0]});
     });
 
