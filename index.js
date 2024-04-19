@@ -76,6 +76,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("createRoom", async ({ userName, avatar }) => {
+    console.log("createRoom", userName, avatar);
     let code = generateCode();
     if (!roomData[code]) {
       roomData[code] = {
@@ -176,20 +177,6 @@ io.on("connection", (socket) => {
 
   });
 
-  socket.on("nextQuestions", ({ indexOfQuestion }) => {
-    // Go to the next question
-    let roomId = socket.data.roomId || null;
-    if (!roomId) {
-      return;
-    }
-    io.to(roomId).emit(
-      "nextQuestions",
-      roomData[roomId].questions[indexOfQuestion + 1].questionText,
-      roomData[roomId].questions[indexOfQuestion + 1].responses,
-      indexOfQuestion + 1
-    );
-    // Return the next question, the possible responses and the index of the question
-  });
 });
 
 server.listen(3000, () => {
