@@ -117,7 +117,7 @@ io.on('connection', (socket) => {
         if(!roomId){
             return;
         }
-        let getQuizz = await getQuizz(roomData[roomId]["uidQuizz"]);
+        let quizz = await getQuizz(roomData[roomId]["uidQuizz"]);
         roomData[roomId]["questions"] = getQuizz.questions;
         // Start the game
         io.to(roomId).emit('startGame', { question :roomData[roomId]["questions"][0] , creator: roomData[roomId]["players"][0]});
