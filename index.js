@@ -59,7 +59,8 @@ const getQuizz = async (uidQuizz) => {
 };
 
 io.on("connection", (socket) => {
-  console.log("a user connected");
+  console.log('a user connected');
+  io.to(socket.id).emit('id', socket.id);
   socket.on("disconnect", () => {
     console.log("user disconnected");
     let roomId = socket.data.roomId || null;
