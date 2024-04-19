@@ -87,11 +87,15 @@ io.on('connection', (socket) => {
     })
 
     socket.on("join", (room, userName, avatar,  callback) => {
-        socket.join(room);
-        console.log(roomData);
-        socket.data.roomId = room;
-        roomData[room]["players"].push({id : socket.id, name: userName, avatar:avatar }); // Use socket.id to identify the player
-        io.to(room).emit('roomData', {players:roomData[room]["players"], roomId:roomData[room]["id"]}); // Return players in the room and ID
+        if (!roomData[room]) {
+            console.log({error: "Room not found"});
+            io.to(socket.id).emit('roomNotFound', {error: "Room not found"});
+        }else{
+            socket.join(room);
+            socket.data.roomId = room;
+            roomData[room]["players"].push({id : socket.id, name: userName, avatar:avatar }); // Use socket.id to identify the player
+            io.to(room).emit('roomData', {players:roomData[room]["players"], roomId:roomData[room]["id"]}); // Return players in the room and ID
+        }
     });
 
 
@@ -99,7 +103,7 @@ io.on('connection', (socket) => {
         console.log("startGame")
         console.log(room)
         // Start the game
-        io.to(room).emit('startGame', { question :roomData[room]["questions"][0]} );
+        io.to(room).emit('startGame', { question :roomData[room]["questions"][0] , creator: roomData[room]["players"][0]});
     });
 
     socket.on("responsePlayer", (room, response, indexOfQuestion) => {
