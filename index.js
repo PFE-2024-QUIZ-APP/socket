@@ -82,17 +82,20 @@ io.on('connection', (socket) => {
             };
         }
         socket.join(code);
+        socket.data.roomId = code;
         roomData[code].players.push({id: socket.id, name: userName, avatar: avatar}); // Use socket.id to identify the player
         io.to(code).emit('roomData', {players: roomData[code]["players"], roomId: roomData[code]["id"], questions:roomData[code]["questions"]}); // Return players in the room and ID
     })
 
     socket.on('editRoom', async (uidQuizz) => {
         let roomId = socket.data.roomId || null;
+        console.log(roomData[roomId]["uidQuizz"]);
         if(!roomId){
             return;
         }
         roomData[roomId]["uidQuizz"] = uidQuizz;
-        io.to(roomId).emit('roomData', {uidQuizz:uidQuizz}); // Return players in the room and ID
+        console.log(roomData[roomId]["uidQuizz"]);
+        io.to(roomId).emit('editRoom', {uidQuizz:uidQuizz}); // Return players in the room and ID
     })
 
     socket.on("join", (room, userName, avatar,  callback) => {
