@@ -71,19 +71,29 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('createRoom', async (uidQuizz, userName, avatar) => {
+    socket.on('createRoom', async (userName, avatar) => {
         let code = generateCode();
         if (!roomData[code]) {
             roomData[code] = {
                 id: code,
                 players: [],
+                uidQuizz: null,
+                questions:[]
             };
         }
-        let quizz = await getQuizz(uidQuizz)
         socket.join(code);
-        roomData[code].questions = quizz.questions;
+        console.log("User connected to room", code);
         roomData[code].players.push({id: socket.id, name: userName, avatar: avatar}); // Use socket.id to identify the player
         io.to(code).emit('roomData', {players: roomData[code]["players"], roomId: roomData[code]["id"], questions:roomData[code]["questions"]}); // Return players in the room and ID
+    })
+
+    socket.on('editRoom', async (uidQuizz) => {
+        let roomId = socket.data.roomId || null;
+        if(!roomId){
+            return;
+        }
+        roomData[roomId]["uidQuizz"] = uidQuizz;
+        io.to(roomId).emit('roomData', {players: roomData[roomId]["players"], uidQuizz:uidQuizz}); // Return players in the room and ID
     })
 
     socket.on("join", (room, userName, avatar,  callback) => {
@@ -99,11 +109,16 @@ io.on('connection', (socket) => {
     });
 
 
-    socket.on("startGame", (room) => {
+    socket.on("startGame", async () => {
         console.log("startGame")
-        console.log(room)
+        let roomId = socket.data.roomId || null;
+        if(!roomId){
+            return;
+        }
+        let getQuizz = await getQuizz(roomData[roomId]["uidQuizz"]);
+        roomData[roomId]["questions"] = getQuizz.questions;
         // Start the game
-        io.to(room).emit('startGame', { question :roomData[room]["questions"][0] , creator: roomData[room]["players"][0]});
+        io.to(roomId).emit('startGame', { question :roomData[roomId]["questions"][0] , creator: roomData[roomId]["players"][0]});
     });
 
     socket.on("responsePlayer", (room, response, indexOfQuestion) => {
