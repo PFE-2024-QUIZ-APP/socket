@@ -162,19 +162,27 @@ io.on("connection", (socket) => {
     roomData[roomId].players.forEach((player) => {
       if (player.id === socket.id) {
         player.responses.push(response);
-        console.log(response);
-        console.log(roomData[roomId].questions[indexQuestion]["rightAnswer"] )
         roomData[roomId].questions[indexQuestion]["rightAnswer"] === response ? player.score += 15 : player.score += 0;
       }
     });
-    console.log(roomData[roomId].players);
+
     if (indexQuestion === roomData[roomId].questions.length - 1) {
       io.to(roomId).emit("endGame",{});
       return;
     }
+    let responsesPlayers = roomData[roomId].players.map(player => player.responses[indexQuestion]);
+
+    io.to(roomId).emit("allResponses", {
+      question: roomData[roomId]["questions"][indexQuestion],
+      currentQuestion: indexQuestion,
+      responsesPlayers: responsesPlayers,
+    });
 
     // Check if it's the last user to answer
+    const allAnswered = roomData[roomId].players.every(player => player.responses[indexQuestion] !== undefined);
+    if(allAnswered) {
 
+    }
   });
 
 });
