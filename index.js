@@ -62,7 +62,6 @@ io.on("connection", (socket) => {
   console.log('a user connected');
   io.to(socket.id).emit('id', socket.id);
   socket.on("disconnect", () => {
-    console.log("user disconnected");
     let roomId = socket.data.roomId || null;
     if (roomId) {
       roomData[roomId]["players"] = roomData[roomId]["players"].filter(
@@ -76,7 +75,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("createRoom", async ({ userName, avatar }) => {
-    console.log("createRoom", userName, avatar);
     let code = generateCode();
     if (!roomData[code]) {
       roomData[code] = {
@@ -105,19 +103,15 @@ io.on("connection", (socket) => {
 
   socket.on("editRoom", async (uidQuizz) => {
     let roomId = socket.data.roomId || null;
-    console.log(roomData[roomId]["uidQuizz"]);
     if (!roomId) {
       return;
     }
     roomData[roomId]["uidQuizz"] = uidQuizz;
-    console.log(roomData[roomId]["uidQuizz"]);
     io.to(roomId).emit("editRoom", { uidQuizz: uidQuizz }); // Return players in the room and ID
   });
 
   socket.on("join", ({ room, userName, avatar }) => {
-    console.log({ room, userName, avatar });
     if (!roomData[room]) {
-      console.log({ error: "Room not found" });
       io.to(socket.id).emit("roomNotFound", { error: "Room not found" });
     } else {
       socket.join(room);
@@ -141,7 +135,6 @@ io.on("connection", (socket) => {
     if (!roomId) {
       return;
     }
-    console.log(roomData[roomId]);
     let quizz = await getQuizz(roomData[roomId]["uidQuizz"]);
     roomData[roomId]["questions"] = quizz.questions;
     let currentQuestion = roomData[roomId]["currentQuestion"];
