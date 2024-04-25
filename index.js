@@ -165,12 +165,8 @@ io.on("connection", (socket) => {
         roomData[roomId].questions[indexQuestion]["rightAnswer"] === response ? player.score += 15 : player.score += 0;
       }
     });
-
-    if (indexQuestion === roomData[roomId].questions.length - 1) {
-      io.to(roomId).emit("endGame",{});
-      return;
-    }
     let responsesPlayers = roomData[roomId].players.map(player => player.responses[indexQuestion]);
+
 
     io.to(roomId).emit("allResponses", {
       question: roomData[roomId]["questions"][indexQuestion],
@@ -181,10 +177,37 @@ io.on("connection", (socket) => {
     // Check if it's the last user to answer
     const allAnswered = roomData[roomId].players.every(player => player.responses[indexQuestion] !== undefined);
     if(allAnswered) {
+      io.to(roomId).emit("timerEnded", {
+        question: roomData[roomId]["questions"][indexQuestion],
+        currentQuestion: indexQuestion,
+        responsesPlayers: responsesPlayers,
+      });
 
+      if (indexQuestion === roomData[roomId].questions.length - 1) {
+        io.to(roomId).emit("endGame",{
+          question: roomData[roomId]["questions"][indexQuestion],
+          currentQuestion: indexQuestion,
+          players: roomData[roomId].players,
+        });
+      }
     }
   });
 
+  socket.on("restart", async () => {
+    let roomId = socket.data.roomId || null;
+    if (!roomId) {
+      return;
+    }
+    roomData[roomId].players.forEach(player => {
+      player.responses = [];
+    });
+    roomData[roomId].currentQuestion = 0;
+    io.to(roomId).emit("roomData", {
+      players: roomData[roomId]["players"],
+      roomId: roomData[roomId]["id"],
+      questions: roomData[roomId]["questions"],
+    });
+  });
 });
 
 server.listen(3000, () => {
