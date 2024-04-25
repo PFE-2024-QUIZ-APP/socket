@@ -76,12 +76,14 @@ io.on("connection", (socket) => {
   });
 
   socket.on("createRoom", async ({ userName, avatar }) => {
+    console.log("createRoom", userName, avatar);
     let code = generateCode();
     if (!roomData[code]) {
       roomData[code] = {
         id: code,
         players: [],
         uidQuizz: null,
+        currentQuestion: 0,
         questions: [],
       };
     }
@@ -91,6 +93,8 @@ io.on("connection", (socket) => {
       id: socket.id,
       name: userName,
       avatar: avatar,
+      score: 0,
+      responses: []
     }); // Use socket.id to identify the player
     io.to(code).emit("roomData", {
       players: roomData[code]["players"],
@@ -111,6 +115,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("join", ({ room, userName, avatar }) => {
+    console.log({ room, userName, avatar });
     if (!roomData[room]) {
       console.log({ error: "Room not found" });
       io.to(socket.id).emit("roomNotFound", { error: "Room not found" });
@@ -121,6 +126,8 @@ io.on("connection", (socket) => {
         id: socket.id,
         name: userName,
         avatar: avatar,
+        score: 0,
+        responses: []
       }); // Use socket.id to identify the player
       io.to(room).emit("roomData", {
         players: roomData[room]["players"],
@@ -129,59 +136,77 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("startGame", async () => {
-    console.log("startGame");
+  socket.on("nextQuestion", async () => {
     let roomId = socket.data.roomId || null;
     if (!roomId) {
       return;
     }
+    console.log(roomData[roomId]);
     let quizz = await getQuizz(roomData[roomId]["uidQuizz"]);
     roomData[roomId]["questions"] = quizz.questions;
-    io.to(roomId).emit("startGame", {
-      question: roomData[roomId]["questions"][0],
+    let currentQuestion = roomData[roomId]["currentQuestion"];
+    io.to(roomId).emit("nextQuestion", {
+      question: roomData[roomId]["questions"][currentQuestion],
       creator: roomData[roomId]["players"][0],
+      currentQuestion: currentQuestion,
     });
+    roomData[roomId]["currentQuestion"] = currentQuestion + 1;
   });
 
-  socket.on("responsePlayer", ({ room, response, indexOfQuestion }) => {
+  socket.on("responsePlayer", ({ indexQuestion, response }) => {
     // Receive a response from a player
-    roomData[room].responsesPlayers[indexOfQuestion] = response;
-    if (indexOfQuestion === roomData[room].questions.length - 1) {
-      // If it's the last question
-      io.to(room).emit(
-        "endGame",
-        roomData[room].responsesPlayers,
-        roomData[room].scorePlayers
-      );
+    let roomId = socket.data.roomId || null;
+    if (!roomId) {
       return;
     }
-    if (
-      roomData[room].responsesPlayers.length === roomData[room].players.length
-    ) {
-      // If everyPlayer have answered
-      io.to(room).emit(
-        "endQuestions",
-        roomData[room].responsesPlayers,
-        roomData[room].questions[indexOfQuestion]
-      );
-      return;
+    roomData[roomId].players.forEach((player) => {
+      if (player.id === socket.id) {
+        player.responses.push(response);
+        roomData[roomId].questions[indexQuestion]["rightAnswer"] === response ? player.score += 15 : player.score += 0;
+      }
+    });
+    let responsesPlayers = roomData[roomId].players.map(player => player.responses[indexQuestion]);
+
+
+    io.to(roomId).emit("allResponses", {
+      question: roomData[roomId]["questions"][indexQuestion],
+      currentQuestion: indexQuestion,
+      responsesPlayers: responsesPlayers,
+    });
+
+    // Check if it's the last user to answer
+    const allAnswered = roomData[roomId].players.every(player => player.responses[indexQuestion] !== undefined);
+    if(allAnswered) {
+      io.to(roomId).emit("timerEnded", {
+        question: roomData[roomId]["questions"][indexQuestion],
+        currentQuestion: indexQuestion,
+        responsesPlayers: responsesPlayers,
+      });
+
+      if (indexQuestion === roomData[roomId].questions.length - 1) {
+        io.to(roomId).emit("endGame",{
+          question: roomData[roomId]["questions"][indexQuestion],
+          currentQuestion: indexQuestion,
+          players: roomData[roomId].players,
+        });
+      }
     }
-    io.to(room).emit(
-      "responsePlayer",
-      roomData[room].responsesPlayers[indexOfQuestion]
-    );
-    // Return the responses of the players to all users in the room
   });
 
-  socket.on("nextQuestions", ({ room, indexOfQuestion }) => {
-    // Go to the next question
-    io.to(room).emit(
-      "nextQuestions",
-      roomData[room].questions[indexOfQuestion + 1].questionText,
-      roomData[room].questions[indexOfQuestion + 1].responses,
-      indexOfQuestion + 1
-    );
-    // Return the next question, the possible responses and the index of the question
+  socket.on("restart", async () => {
+    let roomId = socket.data.roomId || null;
+    if (!roomId) {
+      return;
+    }
+    roomData[roomId].players.forEach(player => {
+      player.responses = [];
+    });
+    roomData[roomId].currentQuestion = 0;
+    io.to(roomId).emit("roomData", {
+      players: roomData[roomId]["players"],
+      roomId: roomData[roomId]["id"],
+      questions: roomData[roomId]["questions"],
+    });
   });
 });
 
