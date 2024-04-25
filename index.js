@@ -19,7 +19,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 const db = getFirestore(app);
-
+const port = process.env.PORT || 3001;
 const appServer = express();
 const server = createServer(appServer);
 const io = new Server(server, {
@@ -210,6 +210,6 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(3000, () => {
+server.listen(port, () => {
   console.log("server running at http://localhost:3000");
 });
