@@ -112,9 +112,9 @@ io.on("connection", (socket) => {
 
   socket.on("join", ({ room, userName, avatar }, callback) => {
     if (!roomData[room]) {
-      callback({
-        status: "error"
-      });
+      // callback({
+      //   status: "error"
+      // });
     } else {
       socket.join(room);
       socket.data.roomId = room;
