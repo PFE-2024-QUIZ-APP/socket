@@ -137,9 +137,11 @@ io.on("connection", (socket) => {
     if (!roomId) {
       return;
     }
-    let quizz = await getQuizz(roomData[roomId]["uidQuizz"]);
-    roomData[roomId]["questions"] = quizz.questions;
     let currentQuestion = roomData[roomId]["currentQuestion"];
+    if(currentQuestion === 0) {
+      let quizz = await getQuizz(roomData[roomId]["uidQuizz"]);
+      roomData[roomId]["questions"] = quizz.questions;
+    }
     io.to(roomId).emit("nextQuestion", {
       question: roomData[roomId]["questions"][currentQuestion],
       creator: roomData[roomId]["players"][0],
