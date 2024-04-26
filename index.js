@@ -110,9 +110,11 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("editRoom", { uidQuizz: uidQuizz }); // Return players in the room and ID
   });
 
-  socket.on("join", ({ room, userName, avatar }) => {
+  socket.on("join", ({ room, userName, avatar }, callback) => {
     if (!roomData[room]) {
-      io.to(socket.id).emit("roomNotFound", { error: "Room not found" });
+      callback({
+        status: "error"
+      });
     } else {
       socket.join(room);
       socket.data.roomId = room;
